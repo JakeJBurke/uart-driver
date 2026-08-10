@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdlib.h>
 
 void uart_init(unsigned int baud) {
     UBRR0H = (unsigned char)(baud >> 8);
@@ -20,12 +21,32 @@ void uart_send_string(const char* str) {
     }
 }
 
+uint16_t adc_read(uint8_t channel) {
+    // Select ADC channel
+    ADMUX = (1 << REFS0) | (channel & 0x0F);
+    
+    // Enable ADC and start conversion
+    ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2) | (1 << ADPS1);
+    
+    // Wait for conversion to complete
+    while (ADCSRA & (1 << ADSC));
+    
+    return ADC;
+}
+
 int main(void) {
     uart_init(103);
 
+    char buffer[16];
+    uint16_t adc_value;
+
     while (1) {
-        uart_send_string("Hello from ATmega328P!\r\n");
-        _delay_ms(1000);
+        adc_value = adc_read(0);
+        itoa(adc_value, buffer, 10);
+        uart_send_string("ADC Value: ");
+        uart_send_string(buffer);
+        uart_send_string("\r\n");
+        _delay_ms(100);
     }
 
     return 0;
